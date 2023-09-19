@@ -25,6 +25,9 @@
 
 pragma solidity ^0.8.19;
 
+import {DecentralizedStableCoin} from "./DecentralizedStableCoin.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
 /**
  * @title DSCEngine
  * @author Kelvin.eth
@@ -41,6 +44,89 @@ pragma solidity ^0.8.19;
  * @notice This contract is VERY loosely based on the MakerDAO DSS (DAI) system.
  */
 
-contract DSCEngine {
+contract DSCEngine is ReentrancyGuard {
+    ///////
+    // Errors //
+    ///////
 
+    error DSCEngine__NeedsMoreThanZero();
+    error DSCEngine__TokenAddressAndPriceFeedAddressMustBeSameLength();
+    error DSCEngine__TokenNotAllowed();
+
+    ///////
+    // State Variables //
+    ///////
+    mapping(address token => address priceFeed) private s_priceFeed;
+    mapping(address user => mapping(address token => uint256 amount)) private s_collateralDeposited;
+    DecentralizedStableCoin private immutable i_dsc;
+
+    ///////
+    // Events .....//
+    ///////
+
+    event collateralDeposited(address indexed user, address indexed token, uint256 amount);
+
+    ///////
+    // Modifiers //
+    ///////
+
+    modifier moreThanZero(uint256 amount) {
+        if (amount == 0) {
+            revert DSCEngine__NeedsMoreThanZero();
+        }
+        _;
+    }
+
+    modifier isAllowedToken(address token) {
+        if (s_priceFeed[token] == address(0)) {
+            revert DSCEngine__TokenNotAllowed();
+        }
+        _;
+    }
+
+    ///////
+    // functions //
+    ///////
+    constructor(address[] memory tokenAddress, address[] memory priceFeedAddresses, address dscAddress) {
+        if (tokenAddress.length != priceFeedAddresses.length) {
+            revert DSCEngine__TokenAddressAndPriceFeedAddressMustBeSameLength();
+        }
+        for (uint256 i = 0; i < tokenAddress.length; i++) {
+            s_priceFeed[tokenAddress[i]] = priceFeedAddresses[i];
+        }
+        i_dsc = DecentralizedStableCoin(dscAddress);
+    }
+
+    ///////
+    // External functions //
+    ///////
+    function depositCollateralAndMintDsc() external {}
+
+    /**
+     * @notice follows CEI pattern
+     * @param tokenCollateralAddress the address of the collateral to withdraw
+     * @param amountCollateral the amount of collateral to withdraw
+     */
+
+    function depositCollateral(address tokenCollateralAddress, uint256 amountCollateral)
+        external
+        moreThanZero(amountCollateral)
+        isAllowedToken(tokenCollateralAddress)
+        nonReentrant
+    {
+        s_collateralDeposited[msg.sender][tokenCollateralAddress] += amountCollateral;
+        emit collateralDeposited(msg.sender, tokenCollateralAddress, amountCollateral);
+    }
+
+    function redeemCollateralForDsc() external {}
+
+    function redeemCollateral() external {}
+
+    function mintDsc() external {}
+
+    function burnDsc() external {}
+
+    function liquidate() external {}
+
+    function getHealthFactor() external {}
 }
