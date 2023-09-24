@@ -60,11 +60,12 @@ contract DSCEngine is ReentrancyGuard {
     ///////
     mapping(address token => address priceFeed) private s_priceFeed;
     mapping(address user => mapping(address token => uint256 amount)) private s_collateralDeposited;
+    mapping(address user => uint256 amountDScMinted) private s_DSCMinted;
     DecentralizedStableCoin private immutable i_dsc;
 
     ///////
-    // Events .....//
     ///////
+    // Events .....//
 
     event collateralDeposited(address indexed user, address indexed token, uint256 amount);
 
@@ -99,9 +100,9 @@ contract DSCEngine is ReentrancyGuard {
         i_dsc = DecentralizedStableCoin(dscAddress);
     }
 
-    ///////
+    ////////////////////////
     // External functions //
-    ///////
+    ///////////////////////
     function depositCollateralAndMintDsc() external {}
 
     /**
@@ -134,11 +135,41 @@ contract DSCEngine is ReentrancyGuard {
      * @notice they must have more collateral value than the minimum threshold
      */
 
-    function mintDsc(uint256 amountDscToMint) external moreThanZero(amountDscToMint) nonReentrant {}
+    function mintDsc(uint256 amountDscToMint) external moreThanZero(amountDscToMint) nonReentrant {
+        s_DSCMinted[msg.sender] += amountDscToMint;
+        //if they minted too much($150 DSC, $100ETH)
+        revertIfHealthFactorIsBroken(msg.sender);
+    }
 
     function burnDsc() external {}
 
     function liquidate() external {}
 
     function getHealthFactor() external {}
+
+    ////////////////////////////////
+    // Private & internal view functions //
+    ///////////////////////////////
+
+    function _getAccountInformation(address user)
+        private
+        view
+        returns (uint256 totalDscMinted, uint256 collateralValueInUSd)
+    {
+        totalDscMinted = s_DSCMinted[user];
+        collateralValueInUSd = getAccountCollateralValue(user);
+    }
+
+    /**
+     * Returns how close to liquidation a user is
+     * if a user goes below 1, then they can get liquidated
+     */
+
+    function _healthFactor(address user) private view returns (uint256) {
+        // total Dsc minted
+        // total collateral VALUE
+        (uint256 totalDscMinted, uint256 collateralValueInUSd) = _getAccountInformation(user);
+    }
+
+    function _revertIfHealthFactorISBroken(address user) internal view {}
 }
