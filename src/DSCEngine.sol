@@ -28,6 +28,7 @@ pragma solidity ^0.8.19;
 import {DecentralizedStableCoin} from "./DecentralizedStableCoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /**
  * @title DSCEngine
@@ -61,6 +62,7 @@ contract DSCEngine is ReentrancyGuard {
     mapping(address token => address priceFeed) private s_priceFeed;
     mapping(address user => mapping(address token => uint256 amount)) private s_collateralDeposited;
     mapping(address user => uint256 amountDScMinted) private s_DSCMinted;
+    address[] private s_collateralTokens;
     DecentralizedStableCoin private immutable i_dsc;
 
     ///////
@@ -96,6 +98,7 @@ contract DSCEngine is ReentrancyGuard {
         }
         for (uint256 i = 0; i < tokenAddress.length; i++) {
             s_priceFeed[tokenAddress[i]] = priceFeedAddresses[i];
+            s_collateralTokens.push(tokenAddress[i]);
         }
         i_dsc = DecentralizedStableCoin(dscAddress);
     }
@@ -172,4 +175,24 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     function _revertIfHealthFactorISBroken(address user) internal view {}
+
+    ////////////////////////////////
+    // public & external view functions //
+    ////////////////////////////
+
+    function getAccountCollateralValue(address user) public view returns (uint256) {
+        // loop through eachcollateral toekn, get the amount and map them to
+        // the price, to get the USD value.
+
+        for(uint256 i =0, i < s_collateralTokens.length; i++){
+            address token = s_collateralTokens[i];
+            uint256 amount = s_collateralDeposited[user][token];
+            totalCollateralInUsd +=
+        }
+    }
+
+    funtion getUsdValue(address token, uint256 amount) public view returns(uint256){
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeed[token]);
+        (,int256 price,,,) = priceFeed.latestRoundData();
+    }
 }
